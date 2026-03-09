@@ -1,0 +1,503 @@
+
+local Players      = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UIS          = game:GetService("UserInputService")
+local RunService   = game:GetService("RunService")
+local LP           = Players.LocalPlayer
+
+pcall(function()
+    if game.CoreGui:FindFirstChild("KhngGUI_v4") then
+        game.CoreGui:FindFirstChild("KhngGUI_v4"):Destroy()
+    end
+end)
+
+local C = {
+    bg       = Color3.fromRGB(10, 10, 18),
+    card     = Color3.fromRGB(20, 20, 34),
+    border   = Color3.fromRGB(45, 45, 70),
+    blue     = Color3.fromRGB(90, 175, 255),
+    violet   = Color3.fromRGB(130, 80, 255),
+    green    = Color3.fromRGB(50, 215, 120),
+    red      = Color3.fromRGB(255, 70, 85),
+    pink     = Color3.fromRGB(255, 50, 105),
+    text     = Color3.fromRGB(228, 232, 255),
+    sub      = Color3.fromRGB(105, 110, 150),
+    trackOFF = Color3.fromRGB(32, 32, 52),
+    trackON  = Color3.fromRGB(35, 185, 100),
+    thumbOFF = Color3.fromRGB(65, 65, 95),
+    thumbON  = Color3.fromRGB(255, 255, 255),
+}
+
+local function tw(obj, t, props, sty, dir)
+    TweenService:Create(obj,
+        TweenInfo.new(t, sty or Enum.EasingStyle.Quart, dir or Enum.EasingDirection.Out),
+        props):Play()
+end
+
+local function rnd(obj, r)
+    local u = Instance.new("UICorner")
+    u.CornerRadius = UDim.new(0, r or 12)
+    u.Parent = obj
+end
+
+local function brd(obj, col, thick, tr)
+    local s = Instance.new("UIStroke")
+    s.Color        = col   or C.border
+    s.Thickness    = thick or 1
+    s.Transparency = tr    or 0
+    s.Parent = obj
+    return s
+end
+
+local function lbl(parent, txt, sz, col, fnt, xa, ya)
+    local l = Instance.new("TextLabel")
+    l.BackgroundTransparency = 1
+    l.Text           = txt
+    l.TextSize       = sz  or 13
+    l.TextColor3     = col or C.text
+    l.Font           = fnt or Enum.Font.GothamBold
+    l.TextXAlignment = xa  or Enum.TextXAlignment.Left
+    l.TextYAlignment = ya  or Enum.TextYAlignment.Center
+    l.Parent         = parent
+    return l
+end
+
+local SG = Instance.new("ScreenGui")
+SG.Name           = "KhngGUI_v4"
+SG.ResetOnSpawn   = false
+SG.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+SG.DisplayOrder   = 999
+SG.IgnoreGuiInset = true
+SG.Parent         = game.CoreGui
+
+-- TOAST SYSTEM
+local toastQueue = {}
+local toastBusy  = false
+
+local function showToast(icon, title, msg, col)
+    table.insert(toastQueue, {icon=icon, title=title, msg=msg, col=col})
+    if toastBusy then return end
+    toastBusy = true
+    task.spawn(function()
+        while #toastQueue > 0 do
+            local item = table.remove(toastQueue, 1)
+            local T = Instance.new("Frame")
+            T.Size             = UDim2.fromOffset(270, 56)
+            T.Position         = UDim2.new(1, 10, 0, 16)
+            T.BackgroundColor3 = Color3.fromRGB(13, 13, 22)
+            T.BorderSizePixel  = 0
+            T.ZIndex           = 200
+            T.Parent           = SG
+            rnd(T, 13)
+            brd(T, item.col, 1.5)
+
+            local Bar = Instance.new("Frame")
+            Bar.Size             = UDim2.fromOffset(3, 56)
+            Bar.BackgroundColor3 = item.col
+            Bar.BorderSizePixel  = 0
+            Bar.ZIndex           = 201
+            Bar.Parent           = T
+            rnd(Bar, 2)
+
+            local Ic = lbl(T, item.icon, 22, item.col, Enum.Font.GothamBold, Enum.TextXAlignment.Center)
+            Ic.Size     = UDim2.fromOffset(44, 56)
+            Ic.Position = UDim2.fromOffset(6, 0)
+            Ic.ZIndex   = 202
+
+            local TT = lbl(T, item.title, 13, C.text, Enum.Font.GothamBold, Enum.TextXAlignment.Left, Enum.TextYAlignment.Top)
+            TT.Size     = UDim2.fromOffset(200, 20)
+            TT.Position = UDim2.fromOffset(54, 10)
+            TT.ZIndex   = 202
+
+            local TM = lbl(T, item.msg, 10, item.col, Enum.Font.Gotham, Enum.TextXAlignment.Left, Enum.TextYAlignment.Top)
+            TM.Size     = UDim2.fromOffset(200, 16)
+            TM.Position = UDim2.fromOffset(54, 30)
+            TM.ZIndex   = 202
+
+            tw(T, .35, {Position = UDim2.new(1, -286, 0, 16)}, Enum.EasingStyle.Back)
+            task.wait(2.8)
+            tw(T, .28, {Position = UDim2.new(1, 10, 0, 16)})
+            task.wait(.32)
+            T:Destroy()
+            task.wait(.1)
+        end
+        toastBusy = false
+    end)
+end
+
+-- FLOATING TOGGLE BUTTON
+local menuOpen = false
+
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Size             = UDim2.fromOffset(48, 48)
+ToggleBtn.Position         = UDim2.new(0, 16, 0.5, -24)
+ToggleBtn.BackgroundColor3 = C.violet
+ToggleBtn.Text             = "☰"
+ToggleBtn.TextColor3       = Color3.new(1,1,1)
+ToggleBtn.TextSize         = 22
+ToggleBtn.Font             = Enum.Font.GothamBold
+ToggleBtn.BorderSizePixel  = 0
+ToggleBtn.AutoButtonColor  = false
+ToggleBtn.ZIndex           = 300
+ToggleBtn.Parent           = SG
+rnd(ToggleBtn, 14)
+
+local TBGrad = Instance.new("UIGradient")
+TBGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, C.blue),
+    ColorSequenceKeypoint.new(1, C.violet),
+})
+TBGrad.Rotation = 135
+TBGrad.Parent   = ToggleBtn
+
+local TBStroke = brd(ToggleBtn, C.violet, 2)
+
+local pt = 0
+local pconn
+pconn = RunService.Heartbeat:Connect(function(dt)
+    if not ToggleBtn.Parent then pconn:Disconnect() return end
+    pt = pt + dt * 1.2
+    TBStroke.Transparency = math.abs(math.sin(pt)) * 0.6
+end)
+
+ToggleBtn.MouseEnter:Connect(function()
+    tw(ToggleBtn, .15, {BackgroundColor3 = C.blue, Size = UDim2.fromOffset(52,52), Position = UDim2.new(0,14,.5,-26)})
+end)
+ToggleBtn.MouseLeave:Connect(function()
+    tw(ToggleBtn, .15, {BackgroundColor3 = C.violet, Size = UDim2.fromOffset(48,48), Position = UDim2.new(0,16,.5,-24)})
+end)
+
+-- MAIN WINDOW
+local W, H = 298, 318
+
+local Win = Instance.new("Frame")
+Win.Name             = "Win"
+Win.Size             = UDim2.fromOffset(W, H)
+Win.Position         = UDim2.new(0, 76, 0.5, -H/2)
+Win.BackgroundColor3 = C.bg
+Win.BorderSizePixel  = 0
+Win.ClipsDescendants = true
+Win.Visible          = false
+Win.ZIndex           = 100
+Win.Parent           = SG
+rnd(Win, 18)
+local WinStroke = brd(Win, C.border, 1.5)
+
+local WG = Instance.new("UIGradient")
+WG.Color    = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(16,16,28)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(9, 9, 16)),
+})
+WG.Rotation = 130
+WG.Parent   = Win
+
+local LineH = Instance.new("Frame")
+LineH.Size                   = UDim2.new(1,0,0,18)
+LineH.BackgroundTransparency = 1
+LineH.BorderSizePixel        = 0
+LineH.ClipsDescendants       = true
+LineH.ZIndex                 = 105
+LineH.Parent                 = Win
+rnd(LineH, 18)
+
+local TopLine = Instance.new("Frame")
+TopLine.Size             = UDim2.new(1,0,0,3)
+TopLine.BackgroundColor3 = C.blue
+TopLine.BorderSizePixel  = 0
+TopLine.ZIndex           = 106
+TopLine.Parent           = LineH
+local TLG = Instance.new("UIGradient")
+TLG.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0,   C.violet),
+    ColorSequenceKeypoint.new(0.5, C.blue),
+    ColorSequenceKeypoint.new(1,   C.pink),
+})
+TLG.Parent = TopLine
+
+-- TITLE BAR
+local TBarBG = Instance.new("Frame")
+TBarBG.Size                   = UDim2.new(1, 0, 0, 56)
+TBarBG.Position               = UDim2.fromOffset(0, 2)
+TBarBG.BackgroundTransparency = 1
+TBarBG.ZIndex                 = 101
+TBarBG.Parent                 = Win
+
+local Logo = Instance.new("Frame")
+Logo.Size             = UDim2.fromOffset(32, 32)
+Logo.Position         = UDim2.new(0, 14, 0.5, -16)
+Logo.BackgroundColor3 = C.violet
+Logo.BorderSizePixel  = 0
+Logo.ZIndex           = 102
+Logo.Parent           = TBarBG
+rnd(Logo, 9)
+local LGrad = Instance.new("UIGradient")
+LGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, C.blue),
+    ColorSequenceKeypoint.new(1, C.violet),
+})
+LGrad.Rotation = 135
+LGrad.Parent   = Logo
+local LTxt = lbl(Logo, "K", 16, Color3.new(1,1,1), Enum.Font.GothamBold, Enum.TextXAlignment.Center)
+LTxt.Size   = UDim2.new(1,0,1,0)
+LTxt.ZIndex = 103
+
+local TTitle = lbl(TBarBG, "KhngScript", 15, C.text, Enum.Font.GothamBold)
+TTitle.Size     = UDim2.fromOffset(160, 20)
+TTitle.Position = UDim2.new(0, 54, 0, 8)
+TTitle.ZIndex   = 102
+
+local TSub = lbl(TBarBG, "@KhngScript  •  v4.0", 10, C.sub, Enum.Font.Gotham)
+TSub.Size     = UDim2.fromOffset(200, 14)
+TSub.Position = UDim2.new(0, 54, 0, 30)
+TSub.ZIndex   = 102
+
+local XBtn = Instance.new("TextButton")
+XBtn.Size             = UDim2.fromOffset(26, 26)
+XBtn.Position         = UDim2.new(1, -38, 0.5, -13)
+XBtn.BackgroundColor3 = Color3.fromRGB(55, 18, 25)
+XBtn.Text             = "✕"
+XBtn.TextColor3       = C.red
+XBtn.TextSize         = 11
+XBtn.Font             = Enum.Font.GothamBold
+XBtn.BorderSizePixel  = 0
+XBtn.AutoButtonColor  = false
+XBtn.ZIndex           = 110
+XBtn.Parent           = Win
+rnd(XBtn, 8)
+brd(XBtn, C.red, 1, 0.55)
+
+XBtn.MouseEnter:Connect(function() tw(XBtn,.15,{BackgroundColor3=C.red, TextColor3=Color3.new(1,1,1)}) end)
+XBtn.MouseLeave:Connect(function() tw(XBtn,.15,{BackgroundColor3=Color3.fromRGB(55,18,25), TextColor3=C.red}) end)
+
+local Sep = Instance.new("Frame")
+Sep.Size             = UDim2.new(1,-28,0,1)
+Sep.Position         = UDim2.new(0,14,0,58)
+Sep.BackgroundColor3 = C.border
+Sep.BorderSizePixel  = 0
+Sep.ZIndex           = 101
+Sep.Parent           = Win
+
+-- OPEN / CLOSE LOGIC
+local function openMenu()
+    menuOpen = true
+    Win.Visible = true
+    Win.Size    = UDim2.fromOffset(0, H)
+    tw(Win, .38, {Size = UDim2.fromOffset(W, H)}, Enum.EasingStyle.Back)
+    tw(ToggleBtn, .2, {BackgroundColor3 = C.pink, Position = UDim2.new(0,16,.5,-24)})
+    ToggleBtn.Text = "✕"
+end
+
+local function closeMenu()
+    menuOpen = false
+    tw(Win, .28, {Size = UDim2.fromOffset(0, H)}, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
+    tw(ToggleBtn, .2, {BackgroundColor3 = C.violet})
+    ToggleBtn.Text = "☰"
+    task.delay(.3, function() Win.Visible = false end)
+end
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    if menuOpen then closeMenu() else openMenu() end
+end)
+XBtn.MouseButton1Click:Connect(function() closeMenu() end)
+
+-- TOGGLE SWITCH FACTORY
+local function makeToggle(parent, onChange)
+    local state = false
+    local Track = Instance.new("Frame")
+    Track.Size             = UDim2.fromOffset(46, 25)
+    Track.BackgroundColor3 = C.trackOFF
+    Track.BorderSizePixel  = 0
+    Track.Parent           = parent
+    rnd(Track, 13)
+    local TStroke = brd(Track, C.border, 1)
+
+    local Thumb = Instance.new("Frame")
+    Thumb.Size             = UDim2.fromOffset(19, 19)
+    Thumb.Position         = UDim2.new(0, 3, .5, -9.5)
+    Thumb.BackgroundColor3 = C.thumbOFF
+    Thumb.BorderSizePixel  = 0
+    Thumb.ZIndex           = 2
+    Thumb.Parent           = Track
+    rnd(Thumb, 10)
+
+    local HitBox = Instance.new("TextButton")
+    HitBox.Size                   = UDim2.new(1,0,1,0)
+    HitBox.BackgroundTransparency = 1
+    HitBox.Text                   = ""
+    HitBox.ZIndex                 = 3
+    HitBox.Parent                 = Track
+
+    HitBox.MouseButton1Click:Connect(function()
+        state = not state
+        if state then
+            tw(Track, .2,  {BackgroundColor3 = C.trackON})
+            tw(Thumb, .22, {Position=UDim2.new(0,24,.5,-9.5), BackgroundColor3=C.thumbON}, Enum.EasingStyle.Back)
+            TStroke.Color = C.green
+        else
+            tw(Track, .2,  {BackgroundColor3 = C.trackOFF})
+            tw(Thumb, .22, {Position=UDim2.new(0, 3,.5,-9.5), BackgroundColor3=C.thumbOFF}, Enum.EasingStyle.Back)
+            TStroke.Color = C.border
+        end
+        if onChange then onChange(state) end
+    end)
+end
+
+-- CARD FACTORY
+local function makeCard(yOff, icon, title, sub, accent, isToggle, cb)
+    local Card = Instance.new("Frame")
+    Card.Size             = UDim2.new(1,-28,0,65)
+    Card.Position         = UDim2.new(0,14,0,yOff)
+    Card.BackgroundColor3 = C.card
+    Card.BorderSizePixel  = 0
+    Card.ZIndex           = 102
+    Card.Parent           = Win
+    rnd(Card, 14)
+    brd(Card, C.border, 1)
+
+    local ABar = Instance.new("Frame")
+    ABar.Size             = UDim2.fromOffset(3, 34)
+    ABar.Position         = UDim2.new(0,0,.5,-17)
+    ABar.BackgroundColor3 = accent
+    ABar.BorderSizePixel  = 0
+    ABar.ZIndex           = 103
+    ABar.Parent           = Card
+    rnd(ABar, 2)
+
+    local IC = Instance.new("Frame")
+    IC.Size                   = UDim2.fromOffset(40, 40)
+    IC.Position               = UDim2.new(0,14,.5,-20)
+    IC.BackgroundColor3       = accent
+    IC.BackgroundTransparency = 0.84
+    IC.BorderSizePixel        = 0
+    IC.ZIndex                 = 103
+    IC.Parent                 = Card
+    rnd(IC, 12)
+    brd(IC, accent, 1, 0.55)
+
+    local ILbl = lbl(IC, icon, 20, accent, Enum.Font.GothamBold, Enum.TextXAlignment.Center)
+    ILbl.Size   = UDim2.new(1,0,1,0)
+    ILbl.ZIndex = 104
+
+    local TL = lbl(Card, title, 13, C.text, Enum.Font.GothamBold, Enum.TextXAlignment.Left, Enum.TextYAlignment.Top)
+    TL.Size     = UDim2.new(1,-125,0,20)
+    TL.Position = UDim2.new(0,63,0,13)
+    TL.ZIndex   = 103
+
+    local SL = lbl(Card, sub, 10, C.sub, Enum.Font.Gotham, Enum.TextXAlignment.Left, Enum.TextYAlignment.Top)
+    SL.Size     = UDim2.new(1,-125,0,15)
+    SL.Position = UDim2.new(0,63,0,35)
+    SL.ZIndex   = 103
+
+    if isToggle then
+        local TH = Instance.new("Frame")
+        TH.Size                   = UDim2.fromOffset(46, 25)
+        TH.Position               = UDim2.new(1,-58,.5,-12.5)
+        TH.BackgroundTransparency = 1
+        TH.ZIndex                 = 103
+        TH.Parent                 = Card
+        makeToggle(TH, cb)
+    else
+        local HB = Instance.new("TextButton")
+        HB.Size                   = UDim2.new(1,0,1,0)
+        HB.BackgroundTransparency = 1
+        HB.Text                   = ""
+        HB.AutoButtonColor        = false
+        HB.ZIndex                 = 106
+        HB.Parent                 = Card
+
+        local Arr = lbl(Card, "›", 24, accent, Enum.Font.GothamBold, Enum.TextXAlignment.Center)
+        Arr.Size     = UDim2.fromOffset(22,22)
+        Arr.Position = UDim2.new(1,-34,.5,-11)
+        Arr.ZIndex   = 104
+
+        HB.MouseEnter:Connect(function() tw(Card,.15,{BackgroundColor3=Color3.fromRGB(26,26,42)}) end)
+        HB.MouseLeave:Connect(function() tw(Card,.15,{BackgroundColor3=C.card}) end)
+        HB.MouseButton1Down:Connect(function()
+            tw(Card,.08,{Size=UDim2.new(0.97,0,0,62),Position=UDim2.new(0,19,0,yOff+1.5)})
+        end)
+        HB.MouseButton1Up:Connect(function()
+            tw(Card,.13,{Size=UDim2.new(1,-28,0,65),Position=UDim2.new(0,14,0,yOff)})
+            if cb then cb() end
+        end)
+    end
+end
+
+-- BUTTON 1 — FREEZE TRADE
+makeCard(68, "❄", "Freeze Trade", "Khoá giao dịch", C.blue, true, function(on)
+    if on then
+        showToast("❄", "Freeze Trade  BẬT", "Giao dịch đã bị khoá!", C.blue)
+    else
+        showToast("❄", "Freeze Trade  TẮT", "Giao dịch đã được mở lại.", C.sub)
+    end
+    pcall(function()
+        local pg = LP:FindFirstChild("PlayerGui")
+        if not pg then return end
+        for _, g in ipairs(pg:GetDescendants()) do
+            if g:IsA("TextButton") then
+                local n = g.Name:lower()
+                if n:find("confirm") or n:find("accept") or n:find("trade") then
+                    g.Active = not on
+                end
+            end
+        end
+    end)
+end)
+
+-- BUTTON 2 — FORCE ACCEPT
+local forceActive = false
+makeCard(144, "✓", "Force to Accept", "Tự động chấp nhận trade", C.green, true, function(on)
+    forceActive = on
+    if on then
+        showToast("✓", "Force Accept  BẬT", "Đang tự động chấp nhận trade.", C.green)
+        task.spawn(function()
+            while forceActive do
+                task.wait(0.45)
+                pcall(function()
+                    local pg = LP:FindFirstChild("PlayerGui")
+                    if not pg then return end
+                    for _, g in ipairs(pg:GetDescendants()) do
+                        if g:IsA("TextButton") and g.Active then
+                            local n = g.Name:lower()
+                            if n:find("accept") or n:find("confirm") or n:find("ok") then
+                                g:activate()
+                            end
+                        end
+                    end
+                end)
+            end
+        end)
+    else
+        showToast("✓", "Force Accept  TẮT", "Đã dừng tự động chấp nhận.", C.sub)
+    end
+end)
+
+-- BUTTON 3 — TIKTOK/YOUTUBE
+local cooldown = false
+makeCard(220, "▶", "TikTok / Youtube", "@KhngScript", C.pink, false, function()
+    if cooldown then return end
+    cooldown = true
+    showToast("🎬", "Follow ngay!", "TikTok / Youtube: @KhngScript", C.pink)
+    task.delay(3.5, function() cooldown = false end)
+end)
+
+-- FOOTER
+local Foot = lbl(Win, "TikTok / Youtube : @KhngScript", 9, C.sub, Enum.Font.Gotham, Enum.TextXAlignment.Center)
+Foot.Size     = UDim2.new(1,0,0,16)
+Foot.Position = UDim2.new(0,0,1,-18)
+Foot.ZIndex   = 101
+
+-- BORDER HUE PULSE
+local ht = 0
+local hconn
+hconn = RunService.Heartbeat:Connect(function(dt)
+    if not Win.Parent then hconn:Disconnect() return end
+    ht = ht + dt * 0.55
+    WinStroke.Color = Color3.fromHSV(ht % 1, 0.45, 0.85)
+end)
+
+-- WELCOME TOAST
+task.delay(.3, function()
+    showToast("✦", "", C.violet)
+end)
+
+print("[KhngScript v4] Loaded ✓  |  @KhngScript")
